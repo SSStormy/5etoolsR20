@@ -5443,88 +5443,101 @@ var betteR20Base = function () {
 		`,
 	};
 };
-
+    
 const D20plus = function (version) {
-	d20plus.version = version;
+    d20plus.version = version;
 
-	// Window loaded
-	window.onload = function () {
-		window.unwatch("d20");
-		const checkLoaded = setInterval(function () {
-			if (!$("#loading-overlay").is(":visible")) {
-				clearInterval(checkLoaded);
-				d20plus.Init();
-			}
-		}, 1000);
-	};
+    const isR20ESChromePresent = typeof(window.enhancementSuiteEnabled) !== "undefined" && window.enhancementSuiteEnabled &&
+                    typeof(window.enhancementSuiteChromeEnabled) !== "undefined" && window.enhancementSuiteChromeEnabled;
 
-	/* object.watch polyfill by Eli Grey, http://eligrey.com */
-	if (!Object.prototype.watch) {
-		Object.defineProperty(Object.prototype, "watch", {
-			enumerable: false,
-			configurable: true,
-			writable: false,
-			value: function (prop, handler) {
-				var
-					oldval = this[prop],
-					newval = oldval,
-					getter = function () {
-						return newval;
-					},
-					setter = function (val) {
-						oldval = newval;
-						return (newval = handler.call(this, prop, oldval, val));
-					};
-				if (delete this[prop]) {
-					Object.defineProperty(this, prop, {
-						get: getter,
-						set: setter,
-						enumerable: true,
-						configurable: true
-					});
-				}
-			}
-		});
-	}
-	if (!Object.prototype.unwatch) {
-		Object.defineProperty(Object.prototype, "unwatch", {
-			enumerable: false,
-			configurable: true,
-			writable: false,
-			value: function (prop) {
-				var val = this[prop];
-				delete this[prop];
-				this[prop] = val;
-			}
-		});
-	}
-	/* end object.watch polyfill */
+    // Window loaded
+    if(isR20ESChromePresent) {
+        d20plus.log(`Detected R20ES!`);
+        window.r20esChromeBetter20Init = d20plus.Init;
+    } else {
+        /* object.watch polyfill by Eli Grey, http://eligrey.com */
+        if (!Object.prototype.watch) {
+            Object.defineProperty(Object.prototype, "watch", {
+                enumerable: false,
+                configurable: true,
+                writable: false,
+                value: function (prop, handler) {
+                    var
+                        oldval = this[prop],
+                        newval = oldval,
+                        getter = function () {
+                            return newval;
+                        },
+                        setter = function (val) {
+                            oldval = newval;
+                            return (newval = handler.call(this, prop, oldval, val));
+                        };
+                    if (delete this[prop]) {
+                        Object.defineProperty(this, prop, {
+                            get: getter,
+                            set: setter,
+                            enumerable: true,
+                            configurable: true
+                        });
+                    }
+                }
+            });
+        }
+        if (!Object.prototype.unwatch) {
+            Object.defineProperty(Object.prototype, "unwatch", {
+                enumerable: false,
+                configurable: true,
+                writable: false,
+                value: function (prop) {
+                    var val = this[prop];
+                    delete this[prop];
+                    this[prop] = val;
+                }
+            });
+        }
+        /* end object.watch polyfill */
 
-	window.d20ext = {};
-	window.watch("d20ext", function (id, oldValue, newValue) {
-		d20plus.log("Set Development");
-		newValue.environment = "development";
-		Object.defineProperty(newValue, 'seenad', {
-			value: true
-		});
-		return newValue;
-	});
-	window.d20 = {};
-	window.watch("d20", function (id, oldValue, newValue) {
-		d20plus.log("Obtained d20 variable");
-		window.unwatch("d20ext");
-		window.d20ext.environment = "production";
-		newValue.environment = "production";
-		return newValue;
-	});
+        window.onload = function () {
+            window.unwatch("d20");
+            const checkLoaded = setInterval(function () {
+                if (!$("#loading-overlay").is(":visible")) {
+                    clearInterval(checkLoaded);
+                    d20plus.Init();
+                }
+            }, 1000);
+        };
+
+        
+
+        window.d20ext = {};
+        window.watch("d20ext", function (id, oldValue, newValue) {
+            d20plus.log("Set Development");
+            newValue.environment = "development";
+            Object.defineProperty(newValue, 'seenad', {
+                value: true
+            });
+            return newValue;
+        });
+        window.d20 = {};
+        window.watch("d20", function (id, oldValue, newValue) {
+            d20plus.log("Obtained d20 variable");
+            window.unwatch("d20ext");
+            window.d20ext.environment = "production";
+            newValue.environment = "production";
+            return newValue;
+        });
+    }
+    
 	window.d20plus = d20plus;
 	d20plus.log("Injected");
 };
 
 document.addEventListener("DOMContentLoaded", function(event) {
-	// do some template injection
-	$("#tmpl_charactereditor").html($(d20plus.template_charactereditor).html());
-	$("#tmpl_handouteditor").html($(d20plus.template_handouteditor).html());
+    // do some template injection
+    if (typeof(window.$) !== "undefined") {
+        $("#tmpl_charactereditor").html($(d20plus.template_charactereditor).html());
+        $("#tmpl_handouteditor").html($(d20plus.template_handouteditor).html());
+    }
 });
 
 // if we are the topmost frame, inject
@@ -5539,7 +5552,7 @@ if (window.top === window.self) {
 	for (let i = 0; i < SCRIPT_EXTENSIONS.length; ++i) {
 		stack += strip(SCRIPT_EXTENSIONS[i].toString())
 	}
-	stack += strip(D20plus.toString());
+    stack += strip(D20plus.toString());
 
 	stack += "\n}";
 	unsafeWindow.eval("(" + stack + ")('" + GM_info.script.version + "')");
